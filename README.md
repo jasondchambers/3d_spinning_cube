@@ -1,5 +1,5 @@
 # 3d_spinning_cube
-A Java port of the "Code-It-Yourself! 3D Graphics Engine Part #1 - Triangles & Projection" From @javidx9.
+A Java port of the "Code-It-Yourself! 3D Graphics Engine Part #1 - Triangles & Projection" From [@javidx9.](https://twitter.com/javidx9)
 
 The link to the video is https://www.youtube.com/watch?v=ih20l3pJoeU
  
