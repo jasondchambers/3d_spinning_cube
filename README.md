@@ -5,7 +5,7 @@ The link to the video is https://www.youtube.com/watch?v=ih20l3pJoeU
  
 If you are interested in learning 3D graphics, javidx9's videos are very approachable.
 This code is not optimized - it is for educational purposes only. There are optimizations
-(for example, collapsing the matrix multiplications into a one) that are intentionally left
+(for example, collapsing the matrix multiplications into one) that are intentionally left
 out to enable the student to step through.
  
 I wrote this code in Java because I don't run Windows at home (just Mac and Linux). I have nothing
