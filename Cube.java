@@ -38,7 +38,7 @@ record Vec3d(float x, float y, float z) {}
 record Triangle(Vec3d p1, Vec3d p2, Vec3d p3) {}
 record Mesh(List<Triangle> tris) {}
 
-class MatrixOperations {
+class Matrix {
 
     static Vec3d multiplyMatrixVector(Vec3d in, float[][] matrix) {
         float x = in.x() * matrix[0][0] + in.y() * matrix[1][0] + in.z() * matrix[2][0] + matrix[3][0];
@@ -52,54 +52,58 @@ class MatrixOperations {
         }
         return new Vec3d(x, y, z);
     }
-}
 
-class ProjectionMatrix {
-    private float screenWidth;
-    private float screenHeight;
-    private float fNear;
-    private float fFar;
-    private float fFov;
-    private float fAspectRatio;
-    private float fFovRad;
-    private float[][] matProj;
-
-    ProjectionMatrix(float screenWidth, float screenHeight) {
-        this.screenWidth = screenWidth;
-        this.screenHeight = screenHeight;
-        fNear = 0.1f;
-        fFar = 1000.0f;
-        fFov = 90.0f;
-        fAspectRatio = screenHeight / screenWidth;
-        fFovRad = 1.0f / (float)Math.tan(fFov * 0.5f / 180.0f * 3.13159f);
-        matProj = new float[4][4];
+    static float[][] gen_proj_matrix(float screenWidth, float screenHeight) {
+        float fNear = 0.1f;
+        float fFar = 1000.0f;
+        float fFov = 90.0f;
+        float fAspectRatio = screenHeight / screenWidth;
+        float fFovRad = 1.0f / (float)Math.tan(fFov * 0.5f / 180.0f * 3.13159f);
+        float[][] matProj = new float[4][4];
         matProj[0][0] = fAspectRatio * fFovRad; matProj[0][1] = 0.0f;    matProj[0][2] = 0.0f;                              matProj[0][3] = 0.0f;
         matProj[1][0] = 0.0f;                   matProj[1][1] = fFovRad; matProj[1][2] = 0.0f;                              matProj[1][3] = 0.0f;
         matProj[2][0] = 0.0f;                   matProj[2][1] = 0.0f;    matProj[2][2] = fFar / (fFar - fNear);             matProj[2][3] = 1.0f;
         matProj[3][0] = 0.0f;                   matProj[3][1] = 0.0f;    matProj[3][2] = ( -fFar * fNear) / (fFar - fNear); matProj[3][3] = 0.0f;
-    }
-    
-    float[][] getMatProj() {
         return matProj;
     }
 
-    public Triangle translate(Triangle in) {
+    static Triangle translate(Triangle in) {
         Vec3d translated_p1 = new Vec3d(in.p1().x(), in.p1().y(), in.p1().z() + 3.0f);
         Vec3d translated_p2 = new Vec3d(in.p2().x(), in.p2().y(), in.p2().z() + 3.0f);
         Vec3d translated_p3 = new Vec3d(in.p3().x(), in.p3().y(), in.p3().z() + 3.0f);
         return new Triangle(translated_p1, translated_p2, translated_p3);
     }
 
-    public Vec3d scaleIntoView(Vec3d in) {
+    static Vec3d scaleIntoView(Vec3d in, float screenWidth, float screenHeight) {
         float scaled_x = in.x();
         float scaled_y = in.y();
-        
         scaled_x += 1.0f; 
         scaled_y += 1.0f;
-
         scaled_x *= 0.5f * (float) screenWidth;
         scaled_y *= 0.5f * (float) screenHeight;
         return new Vec3d(scaled_x, scaled_y, in.z());
+    }
+
+    static float[][] gen_matrot_x(float fTheta) {
+        float[][] matRotX = new float[4][4];
+        matRotX[0][0] = 1;
+        matRotX[1][1] = (float)Math.cos(fTheta * 0.5f);
+        matRotX[1][2] = (float)Math.sin(fTheta * 0.5f);
+        matRotX[2][1] = -(float)Math.sin(fTheta * 0.5f);
+        matRotX[2][2] = (float)Math.cos(fTheta * 0.5f);
+        matRotX[3][3] = 1;
+        return matRotX;
+    }
+
+    static float[][] gen_matrot_z(float fTheta) {
+        float[][] matRotZ = new float[4][4];
+        matRotZ[0][0] = (float)Math.cos(fTheta);
+        matRotZ[0][1] = (float)Math.sin(fTheta);
+        matRotZ[1][0] = -(float)Math.sin(fTheta);
+        matRotZ[1][1] = (float)Math.cos(fTheta);
+        matRotZ[2][2] = 1;
+        matRotZ[3][3] = 1;
+        return matRotZ;
     }
 }
 
@@ -171,53 +175,36 @@ public class Cube extends Frame implements ActionListener {
 
         fTheta += 0.1f;
 
-        // Rotate the object on the Z axis
-        float[][] matRotZ = new float[4][4];
-        matRotZ[0][0] = (float)Math.cos(fTheta);
-        matRotZ[0][1] = (float)Math.sin(fTheta);
-        matRotZ[1][0] = -(float)Math.sin(fTheta);
-        matRotZ[1][1] = (float)Math.cos(fTheta);
-        matRotZ[2][2] = 1;
-        matRotZ[3][3] = 1;
-
-        // Rotate the object on the X axis
-        float[][] matRotX = new float[4][4];
-        matRotX[0][0] = 1;
-        matRotX[1][1] = (float)Math.cos(fTheta * 0.5f);
-        matRotX[1][2] = (float)Math.sin(fTheta * 0.5f);
-        matRotX[2][1] = -(float)Math.sin(fTheta * 0.5f);
-        matRotX[2][2] = (float)Math.cos(fTheta * 0.5f);
-        matRotX[3][3] = 1;
-
-        ProjectionMatrix projectionMatrix = new ProjectionMatrix(this.getWidth(), this.getHeight());
         for (Triangle tri : this.meshCube.tris()) {
 
             // Rotate the object on the Z axis
-            Vec3d rotatedZP1 = MatrixOperations.multiplyMatrixVector(tri.p1(), matRotZ);
-            Vec3d rotatedZP2 = MatrixOperations.multiplyMatrixVector(tri.p2(), matRotZ);
-            Vec3d rotatedZP3 = MatrixOperations.multiplyMatrixVector(tri.p3(), matRotZ);
+            float[][] matRotZ = Matrix.gen_matrot_z(fTheta);
+            Vec3d rotatedZP1 = Matrix.multiplyMatrixVector(tri.p1(), matRotZ);
+            Vec3d rotatedZP2 = Matrix.multiplyMatrixVector(tri.p2(), matRotZ);
+            Vec3d rotatedZP3 = Matrix.multiplyMatrixVector(tri.p3(), matRotZ);
             Triangle triRotatedZ = new Triangle(rotatedZP1, rotatedZP2, rotatedZP3);
 
             // Rotate the object on the X axis
-            Vec3d rotatedZXP1 = MatrixOperations.multiplyMatrixVector(triRotatedZ.p1(), matRotX);
-            Vec3d rotatedZXP2 = MatrixOperations.multiplyMatrixVector(triRotatedZ.p2(), matRotX);
-            Vec3d rotatedZXP3 = MatrixOperations.multiplyMatrixVector(triRotatedZ.p3(), matRotX);
+            float[][] matRotX = Matrix.gen_matrot_x(fTheta);
+            Vec3d rotatedZXP1 = Matrix.multiplyMatrixVector(triRotatedZ.p1(), matRotX);
+            Vec3d rotatedZXP2 = Matrix.multiplyMatrixVector(triRotatedZ.p2(), matRotX);
+            Vec3d rotatedZXP3 = Matrix.multiplyMatrixVector(triRotatedZ.p3(), matRotX);
             Triangle triRotatedZX = new Triangle(rotatedZXP1, rotatedZXP2, rotatedZXP3);
 
             // Ensure the triangle is in front of the viewer
-            tri = projectionMatrix.translate(triRotatedZX);
+            tri = Matrix.translate(triRotatedZX);
 
             // Project from 3D to 2D
-            Vec3d projectedP1 = MatrixOperations.multiplyMatrixVector(tri.p1(), projectionMatrix.getMatProj());
-            Vec3d projectedP2 = MatrixOperations.multiplyMatrixVector(tri.p2(), projectionMatrix.getMatProj());
-            Vec3d projectedP3 = MatrixOperations.multiplyMatrixVector(tri.p3(), projectionMatrix.getMatProj());
+            float[][] matProj = Matrix.gen_proj_matrix(this.getWidth(), this.getHeight());
+            Vec3d projectedP1 = Matrix.multiplyMatrixVector(tri.p1(), matProj);
+            Vec3d projectedP2 = Matrix.multiplyMatrixVector(tri.p2(), matProj);
+            Vec3d projectedP3 = Matrix.multiplyMatrixVector(tri.p3(), matProj);
 
             // Scale it up
-            Vec3d scaledP1 = projectionMatrix.scaleIntoView(projectedP1);
-            Vec3d scaledP2 = projectionMatrix.scaleIntoView(projectedP2);
-            Vec3d scaledP3 = projectionMatrix.scaleIntoView(projectedP3);
+            Vec3d scaledP1 = Matrix.scaleIntoView(projectedP1, this.getWidth(), this.getHeight());
+            Vec3d scaledP2 = Matrix.scaleIntoView(projectedP2, this.getWidth(), this.getHeight());
+            Vec3d scaledP3 = Matrix.scaleIntoView(projectedP3, this.getWidth(), this.getHeight());
             Triangle triProjectedAndScaled = new Triangle(scaledP1, scaledP2, scaledP3);
-            System.out.println(triProjectedAndScaled);
 
             // Now draw it
             drawTriangle(g, triProjectedAndScaled);
