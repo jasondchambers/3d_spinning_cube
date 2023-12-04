@@ -24,7 +24,6 @@
  **/
 import java.util.Arrays;
 import java.util.List;
-import java.awt.Color;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -165,13 +164,9 @@ public class Cube extends Frame implements ActionListener {
     }
 
     public void paint(Graphics g) {
-        System.out.println("In paint()");
         Graphics2D g2d = (Graphics2D) g;
 
-        // Clear the previous frame
-        g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, getWidth(), getHeight());
-        g2d.setColor(Color.BLUE);
+        super.paint(g2d); // Paint background
 
         fTheta += 0.1f;
 
@@ -207,7 +202,7 @@ public class Cube extends Frame implements ActionListener {
             Triangle triProjectedAndScaled = new Triangle(scaledP1, scaledP2, scaledP3);
 
             // Now draw it
-            drawTriangle(g, triProjectedAndScaled);
+            drawTriangle(g2d, triProjectedAndScaled);
         }
     }
 
