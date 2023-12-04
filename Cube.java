@@ -20,6 +20,7 @@
  * 
  * I also recommend this video to discover the power of the matrix https://www.youtube.com/watch?v=vQ60rFwh2ig
  * 
+ * TODO - The animation can flicker on different platforms. This is because it draws to the screen directly. Instead, use a buffer to draw to then when done drawing, just paint the image.
  * (c) Jason Chambers 2023
  **/
 import java.util.Arrays;
