@@ -51,6 +51,43 @@ def translate(triangle_in):
     translated_p3 = Vec3d(triangle_in.p3.x, triangle_in.p3.y, triangle_in.p3.z + 3.0)
     return Triangle(translated_p1, translated_p2, translated_p3)
 
+def rotate_z(triangle_in, fTheta):
+    # Rotate the object on the Z axis
+    matrot_z = gen_matrot_z(fTheta)
+    rotated_z_p1 = multiply_matrix_vector(triangle_in.p1, matrot_z)
+    rotated_z_p2 = multiply_matrix_vector(triangle_in.p2, matrot_z)
+    rotated_z_p3 = multiply_matrix_vector(triangle_in.p3, matrot_z)
+    return Triangle(rotated_z_p1, rotated_z_p2, rotated_z_p3)
+
+def rotate_x(triangle_in, fTheta):
+    # Rotate the object on the X axis
+    matrot_x = gen_matrot_x(fTheta)
+    rotated_x_p1 = multiply_matrix_vector(triangle_in.p1, matrot_x)
+    rotated_x_p2 = multiply_matrix_vector(triangle_in.p2, matrot_x)
+    rotated_x_p3 = multiply_matrix_vector(triangle_in.p3, matrot_x)
+    return Triangle(rotated_x_p1,rotated_x_p2,rotated_x_p3)
+
+def normal(triangle_in):
+    # Calculate the normal of the triangle
+    # See the first part of https://www.youtube.com/watch?v=XgMWc6LumG4
+    line1_x = triangle_in.p2.x - triangle_in.p1.x 
+    line1_y = triangle_in.p2.y - triangle_in.p1.y
+    line1_z = triangle_in.p2.z - triangle_in.p1.z
+
+    line2_x = triangle_in.p3.x - triangle_in.p1.x 
+    line2_y = triangle_in.p3.y - triangle_in.p1.y
+    line2_z = triangle_in.p3.z - triangle_in.p1.z
+
+    normal_x = line1_y * line2_z - line1_z * line2_y
+    normal_y = line1_z * line2_x - line1_x * line2_z
+    normal_z = line1_x * line2_y - line1_y * line2_x
+
+    l = math.sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z)
+    normal_x /= l
+    normal_y /= l
+    normal_z /= l
+    return Vec3d(normal_x, normal_y, normal_z)
+
 def scale_into_view(vec3d_in, screen_width, screen_height):
     scaled_x = vec3d_in.x
     scaled_y = vec3d_in.y
@@ -79,11 +116,12 @@ def gen_matrot_z(a):
 class Cube:
     def __init__(self) -> None:
         pg.init()
-        self.RES = self.WIDTH, self.HEIGHT = 400,300
-        self.FPS = 60
+        self.RES = self.WIDTH, self.HEIGHT = 1000,1000
+        self.FPS = 10
         self.screen = pg.display.set_mode(self.RES)
         self.clock = pg.time.Clock()
         self.fTheta = 0
+        self.vCamera = Vec3d(0,0,0)
         self.mesh_cube = [
             # SOUTH
             Triangle(Vec3d(0,0,0), Vec3d(0,1,0), Vec3d(1,1,0)),
@@ -111,44 +149,38 @@ class Cube:
         ]
 
     def draw(self):
-        print("In draw()")
         # Clear the previous frame
         self.screen.fill((255,255,255))
 
         self.fTheta += 0.1
 
         for tri in self.mesh_cube:
-            # Rotate the object on the Z axis
-            matrot_z = gen_matrot_z(self.fTheta)
-            rotated_z_p1 = multiply_matrix_vector(tri.p1, matrot_z)
-            rotated_z_p2 = multiply_matrix_vector(tri.p2, matrot_z)
-            rotated_z_p3 = multiply_matrix_vector(tri.p3, matrot_z)
-            tri_rotated_z = Triangle(rotated_z_p1, rotated_z_p2, rotated_z_p3)
-
-            # Rotate the object on the X axis
-            matrot_x = gen_matrot_x(self.fTheta)
-            rotated_zx_p1 = multiply_matrix_vector(tri_rotated_z.p1, matrot_x)
-            rotated_zx_p2 = multiply_matrix_vector(tri_rotated_z.p2, matrot_x)
-            rotated_zx_p3 = multiply_matrix_vector(tri_rotated_z.p3, matrot_x)
-            tri_rotated_zx = Triangle(rotated_zx_p1,rotated_zx_p2,rotated_zx_p3 )
+            #Rotate the triangle first on the Z axis, then on the X axis
+            tri = rotate_z(tri, self.fTheta)
+            tri = rotate_x(tri, self.fTheta)
 
             # Ensure the triangle is in front of the viewer
-            tri = translate(tri_rotated_zx)
+            tri = translate(tri)
 
-            # Project from 3D to 2D
-            mat_proj = gen_proj_matrix(self.WIDTH, self.HEIGHT)
-            projected_p1 = multiply_matrix_vector(tri.p1,mat_proj)
-            projected_p2 = multiply_matrix_vector(tri.p2,mat_proj)
-            projected_p3 = multiply_matrix_vector(tri.p3,mat_proj)
+            # Calculate the normal of the triangle - so we can decide if it's visible or not
+            normal_vec = normal(tri)
 
-            # Scale it up
-            scaled_p1 = scale_into_view(projected_p1, self.WIDTH, self.HEIGHT)
-            scaled_p2 = scale_into_view(projected_p2, self.WIDTH, self.HEIGHT)
-            scaled_p3 = scale_into_view(projected_p3, self.WIDTH, self.HEIGHT)
-            tri_projected_and_scaled = Triangle(scaled_p1, scaled_p2, scaled_p3)
+            #if normal_vec.z < 0:
+            if normal_vec.x * (tri.p1.x - self.vCamera.x) + normal_vec.y * (tri.p1.y - self.vCamera.y) + normal_vec.z * (tri.p1.z - self.vCamera.z) < 0:
+                # Project from 3D to 2D
+                mat_proj = gen_proj_matrix(self.WIDTH, self.HEIGHT)
+                projected_p1 = multiply_matrix_vector(tri.p1,mat_proj)
+                projected_p2 = multiply_matrix_vector(tri.p2,mat_proj)
+                projected_p3 = multiply_matrix_vector(tri.p3,mat_proj)
 
-            # Now draw it
-            self.draw_triangle(tri_projected_and_scaled)
+                # Scale it up
+                scaled_p1 = scale_into_view(projected_p1, self.WIDTH, self.HEIGHT)
+                scaled_p2 = scale_into_view(projected_p2, self.WIDTH, self.HEIGHT)
+                scaled_p3 = scale_into_view(projected_p3, self.WIDTH, self.HEIGHT)
+                tri_projected_and_scaled = Triangle(scaled_p1, scaled_p2, scaled_p3)
+
+                # Now draw it
+                self.draw_triangle(tri_projected_and_scaled)
 
     def draw_triangle(self,tri):
         x1 = tri.p1.x 
