@@ -3,6 +3,8 @@ A Java port and a Python port of the "Code-It-Yourself! 3D Graphics Engine Part 
 
 The link to the video is https://www.youtube.com/watch?v=ih20l3pJoeU
  
+I've also extended the Python port to incorporate lighting - see Part 2 - https://www.youtube.com/watch?v=XgMWc6LumG4
+
 If you are interested in learning 3D graphics, javidx9's videos are very approachable.
 This code is not optimized - it is for educational purposes only. There are optimizations
 (for example, collapsing the matrix multiplications into one) that are intentionally left
