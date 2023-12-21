@@ -1,8 +1,11 @@
 """
 A Python port of the "Code-It-Yourself! 3D Graphics Engine Part #1 - Triangles & Projection"
+and "Code-It-Yourself! 3D Graphics Engine Part #2 - Matrices, Rotations, Lighting & Culling"
 From @javidx9.
 
-The link to the video is https://www.youtube.com/watch?v=ih20l3pJoeU
+The links to the videos are:
+Part 1 - https://www.youtube.com/watch?v=ih20l3pJoeU
+Part 2 - https://www.youtube.com/watch?v=XgMWc6LumG4
 
 If you are interested in learning 3D graphics, javidx9's videos are very approachable.
 This code is not optimized - it is for educational purposes only. There are optimizations
@@ -51,21 +54,19 @@ def translate(triangle_in):
     translated_p3 = Vec3d(triangle_in.p3.x, triangle_in.p3.y, triangle_in.p3.z + 3.0)
     return Triangle(translated_p1, translated_p2, translated_p3)
 
+def rotate(triangle_in, matrot):
+    rotated_p1 = multiply_matrix_vector(triangle_in.p1, matrot)
+    rotated_p2 = multiply_matrix_vector(triangle_in.p2, matrot)
+    rotated_p3 = multiply_matrix_vector(triangle_in.p3, matrot)
+    return Triangle(rotated_p1, rotated_p2, rotated_p3)
+
 def rotate_z(triangle_in, fTheta):
     # Rotate the object on the Z axis
-    matrot_z = gen_matrot_z(fTheta)
-    rotated_z_p1 = multiply_matrix_vector(triangle_in.p1, matrot_z)
-    rotated_z_p2 = multiply_matrix_vector(triangle_in.p2, matrot_z)
-    rotated_z_p3 = multiply_matrix_vector(triangle_in.p3, matrot_z)
-    return Triangle(rotated_z_p1, rotated_z_p2, rotated_z_p3)
+    return rotate(triangle_in, gen_matrot_z(fTheta))
 
 def rotate_x(triangle_in, fTheta):
     # Rotate the object on the X axis
-    matrot_x = gen_matrot_x(fTheta)
-    rotated_x_p1 = multiply_matrix_vector(triangle_in.p1, matrot_x)
-    rotated_x_p2 = multiply_matrix_vector(triangle_in.p2, matrot_x)
-    rotated_x_p3 = multiply_matrix_vector(triangle_in.p3, matrot_x)
-    return Triangle(rotated_x_p1,rotated_x_p2,rotated_x_p3)
+    return rotate(triangle_in, gen_matrot_x(fTheta))
 
 def normal(triangle_in):
     # Calculate the normal of the triangle
@@ -87,6 +88,18 @@ def normal(triangle_in):
     normal_y /= l
     normal_z /= l
     return Vec3d(normal_x, normal_y, normal_z)
+
+def calculate_brightness(normal_vec):
+    # Illimination
+    light_direction_x = 0
+    light_direction_y = 0
+    light_direction_z = -1
+    l = math.sqrt(light_direction_x * light_direction_x + light_direction_y * light_direction_y + light_direction_z * light_direction_z) 
+    light_direction_x /= l
+    light_direction_y /= l
+    light_direction_z /= l
+    dotproduct = normal_vec.x * light_direction_x + normal_vec.y * light_direction_y + normal_vec.z * light_direction_z
+    return dotproduct
 
 def scale_into_view(vec3d_in, screen_width, screen_height):
     scaled_x = vec3d_in.x
@@ -164,9 +177,8 @@ class Cube:
 
             # Calculate the normal of the triangle - so we can decide if it's visible or not
             normal_vec = normal(tri)
-
-            #if normal_vec.z < 0:
             if normal_vec.x * (tri.p1.x - self.vCamera.x) + normal_vec.y * (tri.p1.y - self.vCamera.y) + normal_vec.z * (tri.p1.z - self.vCamera.z) < 0:
+
                 # Project from 3D to 2D
                 mat_proj = gen_proj_matrix(self.WIDTH, self.HEIGHT)
                 projected_p1 = multiply_matrix_vector(tri.p1,mat_proj)
@@ -180,7 +192,8 @@ class Cube:
                 tri_projected_and_scaled = Triangle(scaled_p1, scaled_p2, scaled_p3)
 
                 # Now draw it
-                self.draw_triangle(tri_projected_and_scaled)
+                #self.draw_triangle(tri_projected_and_scaled)
+                self.fill_triangle(tri_projected_and_scaled,calculate_brightness(normal_vec))
 
     def draw_triangle(self,tri):
         x1 = tri.p1.x 
@@ -190,9 +203,32 @@ class Cube:
         x3 = tri.p3.x 
         y3 = tri.p3.y
 
-        pg.draw.line(self.screen, (255,0,0), (x1, y1), (x2, y2))
-        pg.draw.line(self.screen, (255,0,0), (x2, y2), (x3, y3))
-        pg.draw.line(self.screen, (255,0,0), (x3, y3), (x1, y1))
+        pg.draw.line(self.screen, (120,120,120), (x1, y1), (x2, y2))
+        pg.draw.line(self.screen, (120,120,120), (x2, y2), (x3, y3))
+        pg.draw.line(self.screen, (120,120,120), (x3, y3), (x1, y1))
+
+    def adjust_brightness(self, rgb, factor):
+        # Ensure the brightness factor is within the range [0, 1]
+        factor = max(0, min(factor, 1))
+    
+        # Scale each channel by the brightness factor
+        r = int(rgb[0] * factor)
+        g = int(rgb[1] * factor)
+        b = int(rgb[2] * factor)
+        return (r, g, b)
+
+    def fill_triangle(self,tri,brightness):
+        x1 = tri.p1.x 
+        y1 = tri.p1.y
+        x2 = tri.p2.x 
+        y2 = tri.p2.y
+        x3 = tri.p3.x 
+        y3 = tri.p3.y
+
+        original_color = (100,160,120)
+        adjusted_color = self.adjust_brightness(original_color, brightness)
+
+        pg.draw.polygon(self.screen, adjusted_color, [(x1, y1), (x2, y2), (x3, y3)])
     
     def run(self):
         while True:
